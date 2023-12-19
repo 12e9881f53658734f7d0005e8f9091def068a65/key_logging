@@ -20,7 +20,8 @@ features = [
     "Win32_System",
     "Win32_System_Threading",
     "Win32_UI_Input_KeyboardAndMouse",
-    "Win32_System_WindowsProgramming"
+    "Win32_System_WindowsProgramming",
+    "Win32_System_SystemInformation"
 ]
 
 [dependencies.reqwest]

