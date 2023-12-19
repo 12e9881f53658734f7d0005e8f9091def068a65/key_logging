@@ -6,17 +6,26 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+serde_json = "1.0"
+tokio = { version = "1", features = ["full"] }
+
 [dependencies.windows]
+version = "0.52.0"
 features = [
+    "System",
+    "Foundation",
+    "Win32",
     "Win32_Foundation",
     "Win32_UI_WindowsAndMessaging",
     "Win32_System",
     "Win32_System_Threading",
-    "Win32_UI_Input_KeyboardAndMouse"
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_System_WindowsProgramming"
 ]
 
 [dependencies.reqwest]
 version = "0.11"
 features = [
-    "blocking"
+    "blocking",
+    "multipart"
 ]
